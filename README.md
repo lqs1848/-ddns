@@ -15,3 +15,7 @@ http://(你的用户名):(你的用户密码)@members.3322.org/dyndns/update?sys
 支持开机启动（需右键以管理员权限运行）
 支持最小化到托盘
 
+
+下载地址
+https://github.com/lqs1848/-ddns/files/2078857/ddns.zip
+解压后启动即可
