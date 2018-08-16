@@ -1,13 +1,16 @@
 # -ddns
-定时更新动态ip到动态域名服务商<br>
+定时更新本机的ip到动态域名服务商<br>
 支持所有提供 update api 的动态域名服务商 如dynu丶3322丶dyndns丶no-ip 等(只要能用url更新的都支持)<br>
 
 
-dynu.com写法<br>
+dynu.com写法:<br>
 https://api.dynu.com/nic/update?hostname=(你的hostname)&myip={ip4}&myipv6={ip6}&username=(你的用户名)&password=(你的用户密码)<br>
 
-3322.com写法<br>
+3322.com写法:<br>
 http://(你的用户名):(你的用户密码)@members.3322.org/dyndns/update?system=dyndns&hostname=(你的hostname)&myip={ip4}<br>
+
+简单来说<br>
+就是用{ip4}替换到你的更新路径中当前要更新的ip地址<br>
 
 可以添加多个 用换行分割<br>
 
