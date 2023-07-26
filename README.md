@@ -42,5 +42,5 @@ http://(你的用户名):(你的用户密码)@members.3322.org/dyndns/update?sys
 
 
 下载地址:<br>
-https://github.com/lqs1848/-ddns/files/2078857/ddns.zip<br>
+[[https://github.com/lqs1848/-ddns/files/12168873/ddns.zip](https://github.com/lqs1848/-ddns/files/12168873/ddns.zip)]<br>
 解压后启动即可<br>
