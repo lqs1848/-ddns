@@ -23,8 +23,6 @@ namespace ddns
         private string txtDate;
         public string TxtDate { get { return txtDate; } }
 
-        private int count = 0;
-
         public void DdnsStart()
         {
             ThreadPool.QueueUserWorkItem(new WaitCallback(DdnsTaskFun), null);
@@ -41,65 +39,105 @@ namespace ddns
         private void DdnsTaskFun(object obj)
         {
             //OutLog("开始更新DDNS");
+            
             txtDate = DateTime.Now.ToString("yy/MM/dd HH:mm");
             string ipStr = "";
-            string ip6Str = GetIpv6();
-            string addressStr = "";
+            string ip6Str = "";// GetIpv6();
             string beforeIp = txtIp;
-            string ipJson = "";
-            try
-            {
-                ipJson = new HttpClient().GetStringAsync("http://ip.chinaz.com/getip.aspx").Result;
-            }
-            catch (Exception ex)
-            {
 
-            }
-            Match match = new Regex("ip:'(?<ip>.*?)',address:'(?<address>.*?)'").Match(ipJson);
-            if (!match.Success)
+            ipStr = GetIp0();
+            if(ipStr == "")
             {
-                OutLog("查询外网ip失败:"+ipJson);
-                OutLog("将直接访问DDNS 让动态域名服务商自动识别ip");
-
-                txtIp = "auto";
-                txtAddress = ipJson;
-            }
-            else
-            {
-                ipStr = match.Groups["ip"].Value;
-                addressStr = match.Groups["address"].Value;
-
-                if (!string.IsNullOrEmpty(ipStr) && TxtIp.Equals(ipStr) && count < 10)
+                ipStr = GetIp1();
+                if (ipStr == "")
                 {
-                    count++;
-                    return;
+                    ipStr = GetIp2();
                 }
-
-                txtIp = ipStr;
-                txtAddress = addressStr;
             }
-            
+
+            if (ipStr == "")
+            {
+                OutLog("查询外网ip失败");
+                return;
+                //OutLog("将直接访问DDNS 让动态域名服务商自动识别ip");
+            }
+
             if (!txtIp.Equals(beforeIp))
             {
                 OutLog(beforeIp + "->" + txtIp);
             }
-
-            string urls = ConfigAppSettings.GetValue("ddns");
-            if (string.IsNullOrEmpty(urls))
+            else 
             {
-                OutLog("ddns路径未配置!");
+                //ip无变化不更新
                 return;
             }
 
-            List<string> urlArr = urls.Split(new string[] { "\r\n" }, StringSplitOptions.None).ToList();
-            foreach(string pathStr in urlArr)
+            string urls = ConfigAppSettings.GetValue("ddns");
+            if (!string.IsNullOrEmpty(urls))
             {
-                if (!string.IsNullOrEmpty(pathStr))
+                List<string> urlArr = urls.Split(new string[] { "\r\n" }, StringSplitOptions.None).ToList();
+                foreach (string pathStr in urlArr)
                 {
-                    ChangeIp(pathStr, ipStr, ip6Str);
+                    if (!string.IsNullOrEmpty(pathStr))
+                    {
+                        ChangeIp(pathStr, ipStr, ip6Str);
+                    }
                 }
             }
-            count = 0;
+
+            //更新阿里云
+            string aliyunDomain = ConfigAppSettings.GetValue("aliyunDomain");
+            if (!string.IsNullOrEmpty(aliyunDomain))
+            {
+                string aliyunAppId = ConfigAppSettings.GetValue("aliyunAppId");
+                string aliyunKeySecret = ConfigAppSettings.GetValue("aliyunKeySecret");
+
+                List<string> domains = aliyunDomain.Split(new string[] { ",", "，"}, StringSplitOptions.None).ToList();
+                foreach(string domain in domains)
+                {
+                    if (!string.IsNullOrEmpty(domain))
+                    {
+                        string recordId = "";
+                        try
+                        {
+                            string jsonResult = Aliyun.RecordList(aliyunAppId, aliyunKeySecret, domain);
+                            Match match = new Regex(@"""RecordId"":""(?<recordId>.*?)""").Match(jsonResult);
+                            if (match.Success)
+                            {
+                                recordId = match.Groups["recordId"].Value;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            OutLog("阿里云获取解析列表失败");
+                            Console.Write(ex.StackTrace);
+
+                        }
+
+                        try
+                        {
+                            if (!string.IsNullOrEmpty(recordId))
+                            {
+                                //更新解析
+                                string result = Aliyun.UpdateRecord(aliyunAppId, aliyunKeySecret, recordId, ipStr, domain);
+                                OutLog(domain + "->" + ipStr);
+                            }
+                            else
+                            {
+                                //新增解析
+                                string result = Aliyun.AddRecord(aliyunAppId, aliyunKeySecret, ipStr, domain);
+                                OutLog(domain + "->" + ipStr);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            OutLog(domain + "-> Error");
+                            Console.Write(ex.StackTrace);
+                        }
+                        
+                    }//if
+                }//for
+            }//if 更新阿里云
         }//method
 
         private void ChangeIp(string pathStr, string ipStr,string ip6Str)
@@ -147,6 +185,85 @@ namespace ddns
             }
         }//method
 
+        public string GetIp0()
+        {
+            string ipStr = "";
+            string html = "";
+            try
+            {
+                html = GetHtml("https://www.ipip.net");
+            }
+            catch (Exception e)
+            {
+                Console.Error.Write(e);
+            }
+            Match match = new Regex(@"<span>IP地址</span>\s?<a href="".*?"">(?<ip>.*?)</a>[\s\S]*<span>位置信息</span>(?<address>.*?)</li>").Match(html);
+            if (!match.Success)
+            {
+                return ipStr;
+            }
+            else
+            {
+                ipStr = match.Groups["ip"].Value;
+                txtIp = ipStr;
+                txtAddress = match.Groups["address"].Value;
+            }
+            return ipStr;
+        }
+
+        public string GetIp1()
+        {
+            string ipStr = "";
+            string html = "";
+            try
+            {
+                html = GetHtml("http://members.3322.org/dyndns/getip", Encoding.GetEncoding("GBK"));
+                ipStr = html;
+            }
+            catch (Exception e)
+            {
+                Console.Error.Write(e);
+            }
+            Match match = new Regex(@"([0-9]+\.){3}[0-9]+").Match(html);
+            if (!match.Success)
+            {
+                return ipStr;
+            }
+            else
+            {
+                ipStr = match.Groups[0].Value;
+                txtIp = ipStr;
+            }
+            return ipStr;
+        }
+
+        public string GetIp2()
+        {
+            string ipStr = "";
+            string html = "";
+            try
+            {
+                html = GetHtml("http://ip.3322.net", Encoding.GetEncoding("GBK"));
+                ipStr = html;
+            }
+            catch (Exception e)
+            {
+                Console.Error.Write(e);
+            }
+            Match match = new Regex(@"([0-9]+\.){3}[0-9]+").Match(html);
+            if (!match.Success)
+            {
+                return ipStr;
+            }
+            else
+            {
+                ipStr = match.Groups[0].Value;
+                txtIp = ipStr;
+            }
+            return ipStr;
+        }
+
+
         public string GetIpv6()
         {
             try
@@ -170,5 +287,41 @@ namespace ddns
             }
             return "";
         }//method
+
+
+
+
+
+        public string GetHtml(string url, Encoding ed)
+        {
+            string Html = string.Empty;//初始化新的webRequst
+            HttpWebRequest Request = (HttpWebRequest)WebRequest.Create(url);
+
+            Request.KeepAlive = true;
+            Request.ProtocolVersion = HttpVersion.Version11;
+            Request.Method = "GET";
+            Request.Accept = "*/* ";
+            Request.UserAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.56 Safari/536.5";
+            Request.Referer = url;
+
+            HttpWebResponse htmlResponse = (HttpWebResponse)Request.GetResponse();
+            //从Internet资源返回数据流
+            Stream htmlStream = htmlResponse.GetResponseStream();
+            //读取数据流
+            StreamReader weatherStreamReader = new StreamReader(htmlStream, ed);
+            //读取数据
+
+            Html = weatherStreamReader.ReadToEnd();
+            weatherStreamReader.Close();
+            htmlStream.Close();
+            htmlResponse.Close();
+            //针对不同的网站查看html源文件
+            return Html;
+        }
+
+        public string GetHtml(string url)
+        {
+            return GetHtml(url, Encoding.UTF8);
+        }
     }
 }

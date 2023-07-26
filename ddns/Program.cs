@@ -43,7 +43,7 @@ namespace ddns
                 };
                 timer.Enabled = false;
                 timer.AutoReset = true; //一直执行
-                timer.Interval = 5 * 60 * 1000;//间隔毫秒
+                timer.Interval = 1 * 60 * 1000;//间隔毫秒
 
                 //是否自动启动任务
                 string autoRefreshStr = ConfigAppSettings.GetValue("autoRefresh");

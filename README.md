@@ -20,6 +20,27 @@ http://(你的用户名):(你的用户密码)@members.3322.org/dyndns/update?sys
 支持最小化到托盘<br>
 
 
+
+阿里云解析
+
+```
+<configuration>
+  <appSettings>
+    <add key="aliyunAppId" value="阿里云给的appid" />
+    <add key="aliyunKeySecret" value="阿里云给的KeySecret" />
+    <!-- 要更新的域名 多个用<,>逗号隔开 @ 就是 baidu.com 不带二级域名的地址-->
+    <add key="aliyunDomain" value="@.baidu.com,www.baidu.com,ejym.baidu.com" />
+  </appSettings>
+  <startup>
+    <supportedRuntime version="v4.0" sku=".NETFramework,Version=v4.5" />
+  </startup>
+</configuration>
+```
+
+阿里云 @.baidu.com -> Error 如果ip无变化是正常的 ip无变化 阿里云默认给 Code 400 
+
+
+
 下载地址:<br>
 https://github.com/lqs1848/-ddns/files/2078857/ddns.zip<br>
 解压后启动即可<br>
