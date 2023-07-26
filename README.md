@@ -21,7 +21,7 @@ http://(你的用户名):(你的用户密码)@members.3322.org/dyndns/update?sys
 
 
 
-阿里云解析
+阿里云解析 记事本编辑 ddns.exe.Config 文件
 
 ```
 <configuration>
